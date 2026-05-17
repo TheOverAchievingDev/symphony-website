@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Symphony — demo video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #050505;
+    color: #f6f4ef;
+    font-family: "Geist", system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #root { position: fixed; inset: 0; }
+
+  @keyframes demoSpin   { to { transform: rotate(360deg); } }
+  @keyframes demoPulse  { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.25); } }
+  @keyframes demoDots   { 0%, 60%, 100% { opacity: 0.25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+  @keyframes demoFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes demoBlink  { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="demo-data.js"></script>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel" src="demo-shell.jsx"></script>
+<script type="text/babel" src="demo-scenes-1.jsx"></script>
+<script type="text/babel" src="demo-scenes-2.jsx"></script>
+<script type="text/babel" src="demo-scenes-3.jsx"></script>
+
+<script type="text/babel">
+// ── Scene timing (240s total, ~4 minutes) ──────────────────────────────────
+const T = {
+  intro:    [0,    8],
+  foundry:  [8,   53],
+  modal:    [53,  81],
+  cockpit:  [81, 166],
+  tasks:    [166, 188],
+  code:     [188, 208],
+  drift:    [208, 228],
+  outro:    [228, 240],
+};
+
+// ── Captions ────────────────────────────────────────────────────────────────
+const CAPTIONS = [
+  // Intro
+  [  1.0,   6.5, 'Your idea, on your laptop, needs a real dev team.'],
+
+  // Foundry
+  [  9.5,  15.5, 'It starts in Foundry.',                                              'STEP 1 · PLAN'],
+  [ 16.5,  24.0, 'Describe what you want, in plain English.'],
+  [ 25.0,  33.0, 'Foundry asks the architect-y questions you didn\'t know to ask…'],
+  [ 34.0,  44.5, '…and writes the founding docs the team will work from.',             '5 FOUNDING DOCS'],
+  [ 46.0,  51.5, 'Now provision the team.',                                            'STEP 2 · TEAM'],
+
+  // Team modal
+  [ 54.5,  61.0, 'Pick the roles. Pick the providers.'],
+  [ 62.0,  70.0, 'Mix any combination — Claude, Codex, Gemini.'],
+  [ 71.0,  79.0, 'One team. Zero API keys. Your subscription.'],
+
+  // Cockpit
+  [ 82.5,  88.5, 'The team boots in seconds.',                                         'STEP 3 · WATCH'],
+  [ 90.0,  98.5, 'The lead reads the docs, splits the work, delegates the first task.'],
+  [100.0, 110.5, 'Every message and tool call flows through Symphony — so you can watch.'],
+  [112.0, 122.5, 'Tester runs validations. Reviewer reads the diff against the spec.'],
+  [124.0, 134.5, 'You stay in charge — Ask, Delegate, or take the keyboard anytime.'],
+  [136.0, 148.5, 'Two slices closed in a few minutes. You typed nothing.'],
+  [150.0, 163.5, 'All on a real git branch, in a real folder, on your machine.'],
+
+  // Tasks
+  [167.5, 175.0, 'Tasks move from todo to in-progress to review to done.',             'STEP 4 · TRACK'],
+  [176.5, 186.5, 'Every transition is real — backed by real commits.'],
+
+  // Code
+  [189.5, 196.0, 'Open the code anytime.',                                             'STEP 5 · OWN IT'],
+  [197.5, 206.5, 'They\'re just files. Your files. Nothing leaves your machine.'],
+
+  // Drift
+  [209.5, 215.5, 'And Symphony watches the team back.',                                'STEP 6 · DRIFT'],
+  [217.0, 226.5, 'Drift catches the moment an agent strays from the docs.'],
+
+  // Outro — on-screen headline carries the line
+];
+
+function App() {
+  const params = new URLSearchParams(location.search);
+  const seek = parseFloat(params.get('seek'));
+  if (isFinite(seek)) {
+    try { localStorage.setItem('symphony-demo-video:t', String(seek)); } catch {}
+  }
+  const paused = params.has('paused');
+
+  React.useEffect(() => {
+    function onMsg(e) {
+      const data = e.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'demoSeek' && typeof data.t === 'number') {
+        try { localStorage.setItem('symphony-demo-video:t', String(data.t)); } catch {}
+        location.reload();
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  return (
+    <Stage
+      width={1920}
+      height={1080}
+      duration={240}
+      background={COLOR.bg}
+      persistKey="symphony-demo-video"
+      autoplay={!paused}
+      loop={true}
+    >
+      <Sprite start={T.intro[0]}   end={T.intro[1]}><SceneIntro/></Sprite>
+      <Sprite start={T.foundry[0]} end={T.foundry[1]}><SceneFoundry/></Sprite>
+      <Sprite start={T.modal[0]}   end={T.modal[1]}><SceneTeamModal/></Sprite>
+      <Sprite start={T.cockpit[0]} end={T.cockpit[1]}><SceneCockpit/></Sprite>
+      <Sprite start={T.tasks[0]}   end={T.tasks[1]}><SceneTasks/></Sprite>
+      <Sprite start={T.code[0]}    end={T.code[1]}><SceneCode/></Sprite>
+      <Sprite start={T.drift[0]}   end={T.drift[1]}><SceneDrift/></Sprite>
+      <Sprite start={T.outro[0]}   end={T.outro[1]}><SceneOutro/></Sprite>
+
+      {/* Vignette */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20,
+        boxShadow: 'inset 0 0 240px 40px rgba(0,0,0,0.55)',
+      }}/>
+
+      {/* Captions */}
+      {CAPTIONS.map(([s, e, t, sub], i) => (
+        <Sprite key={i} start={s} end={e}>
+          <CaptionBar text={t} sub={sub}/>
+        </Sprite>
+      ))}
+
+      <ChapterIndicator/>
+    </Stage>
+  );
+}
+
+function ChapterIndicator() {
+  const time = useTime();
+  const chapters = [
+    { at: 0,   label: 'Intro' },
+    { at: 8,   label: '01 · Foundry' },
+    { at: 53,  label: '02 · Create team' },
+    { at: 81,  label: '03 · Cockpit' },
+    { at: 166, label: '04 · Tasks' },
+    { at: 188, label: '05 · Code' },
+    { at: 208, label: '06 · Drift' },
+    { at: 228, label: 'Outro' },
+  ];
+  let cur = chapters[0];
+  for (const c of chapters) if (time >= c.at) cur = c;
+
+  return (
+    <div style={{
+      position: 'absolute', top: 18, right: 22, zIndex: 25,
+      padding: '6px 12px', borderRadius: 999,
+      background: 'rgba(8,6,4,0.55)',
+      backdropFilter: 'blur(8px)',
+      border: `1px solid ${COLOR.hair3}`,
+      fontFamily: FONT.mono, fontSize: 11,
+      letterSpacing: '0.08em', textTransform: 'uppercase',
+      color: COLOR.inkSoft,
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: COLOR.coral }}/>
+      {cur.label}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

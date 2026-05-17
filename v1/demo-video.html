@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Symphony — demo video</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #050505;
+    color: #f6f4ef;
+    font-family: "Geist", system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  #root { position: fixed; inset: 0; }
+
+  @keyframes demoSpin   { to { transform: rotate(360deg); } }
+  @keyframes demoPulse  { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.25); } }
+  @keyframes demoDots   { 0%, 60%, 100% { opacity: 0.25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+  @keyframes demoFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes demoBlink  { 50% { opacity: 0; } }
+
+  /* When embedded in an iframe, allow the host to detect ready state. */
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="demo-data.js"></script>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel" src="demo-shell.jsx"></script>
+<script type="text/babel" src="demo-scenes-1.jsx"></script>
+<script type="text/babel" src="demo-scenes-2.jsx"></script>
+<script type="text/babel" src="demo-scenes-3.jsx"></script>
+
+<script type="text/babel">
+// ── Captions (voiceover-style) ──────────────────────────────────────────────
+// Each tuple: [start, end, text, optional subtitle/cue]
+const CAPTIONS = [
+  // Intro (0–12)
+  [ 1.0,  6.0, 'Your idea, in your head, has a problem.'],
+  [ 6.0, 11.5, 'It needs a team.'],
+
+  // Foundry (12–65)
+  [13.5, 19.5, 'Meet Symphony — a desktop studio that gives you one.',          'A vibe-coding IDE'],
+  [21.0, 30.0, 'It starts in Foundry. You describe the project in plain English.', 'STEP 1 · DESCRIBE'],
+  [31.5, 41.5, 'Foundry asks the architect-y questions you didn\'t know to ask…'],
+  [42.5, 55.0, '…and writes a real project plan — brief, spec, schema, roadmap, criteria.', '5 founding docs'],
+  [56.0, 63.5, 'Now provision the team.', 'STEP 2 · MATERIALIZE'],
+
+  // Team modal (65–100)
+  [66.5, 73.5, 'Pick the roles. Pick the providers.'],
+  [74.5, 84.5, 'Claude leads. Codex codes. Gemini tests. Opus reviews.'],
+  [86.0, 94.5, 'One team. Three subscriptions. Zero API keys.'],
+  [95.5, 99.5, 'Click create. The team boots in seconds.'],
+
+  // Cockpit (100–220)
+  [101.5, 109.0, 'From here, you watch.',                                 'STEP 3 · COCKPIT'],
+  [110.5, 122.0, 'The lead reads the founding docs and splits the work.'],
+  [124.0, 138.0, 'Five seconds later — the developer has the first task.'],
+  [140.0, 156.0, 'Every message, every tool call flows through Symphony, so you see it…'],
+  [158.0, 173.0, '…and so the team can coordinate without stepping on each other.'],
+  [175.0, 189.0, 'Tester runs validations. Reviewer reads the diff against the spec.'],
+  [191.0, 205.0, 'You can interrupt anyone — Ask, Delegate, or take the keyboard.',  'YOU\'RE STILL IN CHARGE'],
+  [207.0, 218.0, 'Two slices closed in five minutes. Without you typing a line.'],
+
+  // Tasks (220–250)
+  [221.5, 230.0, 'Tasks move from todo, to in progress, to review, to done.',  'STEP 4 · TRACK'],
+  [231.5, 248.0, 'Every status change is real — backed by a real git branch on your machine.'],
+
+  // Code (250–275)
+  [251.5, 259.0, 'Open the code anytime.',                                  'STEP 5 · OWN IT'],
+  [260.5, 273.5, 'It\'s just files. Your files. Nothing leaves your machine.'],
+
+  // Drift (275–292)
+  [276.5, 282.5, 'And Symphony watches the team back.',                     'STEP 6 · DRIFT'],
+  [283.5, 290.0, 'Drift checks every change against the founding docs — before it ships.'],
+
+  // Outro (292–300) — the on-screen headline carries the line; no caption.
+];
+
+// ── Scene timing ────────────────────────────────────────────────────────────
+const T = {
+  intro:    [0,    12],
+  foundry:  [12,   65],
+  modal:    [65,  100],
+  cockpit:  [100, 220],
+  tasks:    [220, 250],
+  code:     [250, 275],
+  drift:    [275, 292],
+  outro:    [292, 300],
+};
+
+function App() {
+  // ?seek=130&paused=1 → seek to 130s paused (useful for debugging)
+  const params = new URLSearchParams(location.search);
+  const seek = parseFloat(params.get('seek'));
+  if (isFinite(seek)) {
+    try { localStorage.setItem('symphony-demo-video:t', String(seek)); } catch {}
+  }
+  const paused = params.has('paused');
+
+  // Listen for seek messages from the embedding page (chapter clicks).
+  React.useEffect(() => {
+    function onMsg(e) {
+      const data = e.data;
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'demoSeek' && typeof data.t === 'number') {
+        try { localStorage.setItem('symphony-demo-video:t', String(data.t)); } catch {}
+        location.reload();
+      }
+    }
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  return (
+    <Stage
+      width={1920}
+      height={1080}
+      duration={300}
+      background={COLOR.bg}
+      persistKey="symphony-demo-video"
+      autoplay={!paused}
+      loop={true}
+    >
+      <Sprite start={T.intro[0]}   end={T.intro[1]}><SceneIntro/></Sprite>
+      <Sprite start={T.foundry[0]} end={T.foundry[1]}><SceneFoundry/></Sprite>
+      <Sprite start={T.modal[0]}   end={T.modal[1]}><SceneTeamModal/></Sprite>
+      <Sprite start={T.cockpit[0]} end={T.cockpit[1]}><SceneCockpit/></Sprite>
+      <Sprite start={T.tasks[0]}   end={T.tasks[1]}><SceneTasks/></Sprite>
+      <Sprite start={T.code[0]}    end={T.code[1]}><SceneCode/></Sprite>
+      <Sprite start={T.drift[0]}   end={T.drift[1]}><SceneDrift/></Sprite>
+      <Sprite start={T.outro[0]}   end={T.outro[1]}><SceneOutro/></Sprite>
+
+      {/* Vignette */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20,
+        boxShadow: 'inset 0 0 240px 40px rgba(0,0,0,0.55)',
+      }}/>
+
+      {/* Captions */}
+      {CAPTIONS.map(([s, e, t, sub], i) => (
+        <Sprite key={i} start={s} end={e}>
+          <CaptionBar text={t} sub={sub}/>
+        </Sprite>
+      ))}
+
+      {/* Soft progress chapter ticker */}
+      <ChapterIndicator/>
+    </Stage>
+  );
+}
+
+function ChapterIndicator() {
+  const time = useTime();
+  const chapters = [
+    { at: 0,   label: 'Intro' },
+    { at: 12,  label: '01 · Foundry' },
+    { at: 65,  label: '02 · Create team' },
+    { at: 100, label: '03 · Cockpit' },
+    { at: 220, label: '04 · Tasks' },
+    { at: 250, label: '05 · Code' },
+    { at: 275, label: '06 · Drift' },
+    { at: 292, label: 'Outro' },
+  ];
+  let cur = chapters[0];
+  for (const c of chapters) if (time >= c.at) cur = c;
+
+  return (
+    <div style={{
+      position: 'absolute', top: 18, right: 22, zIndex: 25,
+      padding: '6px 12px', borderRadius: 999,
+      background: 'rgba(8,6,4,0.55)',
+      backdropFilter: 'blur(8px)',
+      border: `1px solid ${COLOR.hair2}`,
+      fontFamily: FONT.mono, fontSize: 11,
+      letterSpacing: '0.08em', textTransform: 'uppercase',
+      color: COLOR.inkSoft,
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: 999, background: COLOR.coral }}/>
+      {cur.label}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
